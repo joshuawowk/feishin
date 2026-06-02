@@ -1,0 +1,61 @@
+# Headless Feishin audio host — plays music on THIS machine's speakers.
+#
+# Deploy on the T630 (the box with the speakers attached). Build once, then
+# open http://<t630-ip>:6080 to do first-run setup (login, set Audio player to
+# MPV, pick the output device, enable Remote Control on :4333).
+#
+#   docker compose -f docker/host/docker-compose.yaml up -d --build
+#
+services:
+    feishin-host:
+        container_name: feishin-host
+        build:
+            # context is the repo root so the whole app can be compiled
+            context: ../..
+            dockerfile: docker/host/Dockerfile
+        image: feishin-host:latest
+        restart: unless-stopped
+
+        # --- AUDIO ------------------------------------------------------------
+        # Bare ALSA: expose the host sound cards directly. mpv writes straight to
+        # the hardware, no PulseAudio/PipeWire needed on the server. The in-app
+        # "Audio device" dropdown will list these (alsa/...) outputs.
+        devices:
+            - /dev/snd:/dev/snd
+        # The container's "feishin" user must be in the host's audio group to
+        # open /dev/snd. Find it on the T630 with:  getent group audio
+        # then put that GID here (29 is common on Debian/Ubuntu).
+        group_add:
+            - "29"
+
+        # --- NETWORK ----------------------------------------------------------
+        ports:
+            - "4333:4333"   # Feishin Remote Control (Stream Deck + web remote)
+            - "6080:6080"   # noVNC (browser UI for setup / occasional browsing)
+
+        # --- PERSISTENCE ------------------------------------------------------
+        # Login, settings, and the chosen audio device persist here.
+        volumes:
+            - feishin-host-config:/config
+
+        # Electron likes a bit of shared memory for Chromium
+        shm_size: "512m"
+
+        environment:
+            - FEISHIN_USER_DATA=/config
+
+        # ---------------------------------------------------------------------
+        # OPTION: PipeWire instead of bare ALSA
+        # If you'd rather route through PipeWire/PulseAudio running on the host,
+        # comment out the `devices:`/`group_add:` blocks above and instead mount
+        # the user's audio socket, e.g.:
+        #   environment:
+        #     - XDG_RUNTIME_DIR=/run/user/1000
+        #     - PULSE_SERVER=unix:/run/user/1000/pulse/native
+        #   volumes:
+        #     - /run/user/1000/pulse:/run/user/1000/pulse
+        # (1000 = the host login user's UID that owns the PipeWire session.)
+        # ---------------------------------------------------------------------
+
+volumes:
+    feishin-host-config:
