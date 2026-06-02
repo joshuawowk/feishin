@@ -19,7 +19,11 @@ done
 #   --user-data-dir       : persist login / settings / chosen audio device on the /config volume
 #   --password-store=basic: no OS keyring in a container (safeStorage falls back gracefully)
 #   --ozone-platform=x11  : force X11 backend on the virtual display
-exec /app/node_modules/.bin/electron /app \
+#
+# dbus-run-session gives Electron its own private session bus (owned by this
+# user) so the MPRIS / desktop integration connects cleanly instead of throwing
+# EPIPE against a bus it has no permission to reach.
+exec dbus-run-session -- /app/node_modules/.bin/electron /app \
     --no-sandbox \
     --password-store=basic \
     --ozone-platform=x11 \

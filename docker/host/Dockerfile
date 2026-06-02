@@ -64,22 +64,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy the built app + the electron runtime (node_modules holds the electron binary)
-COPY --from=builder /app/out           ./out
-COPY --from=builder /app/node_modules  ./node_modules
-COPY --from=builder /app/package.json  ./package.json
-COPY --from=builder /app/resources     ./resources
-COPY --from=builder /app/assets        ./assets
+# non-root user that can reach /dev/snd (group "audio" gid is host-dependent;
+# compose adds the host's audio group via group_add)
+RUN useradd -m -u 1000 feishin && mkdir -p /config && chown feishin:feishin /config
+
+# Copy the built app + the electron runtime (node_modules holds the electron
+# binary). Ownership is set during COPY (--chown) — a recursive `chown -R` over
+# the Electron node_modules is pathologically slow and duplicates the layer.
+COPY --from=builder --chown=feishin:feishin /app/out           ./out
+COPY --from=builder --chown=feishin:feishin /app/node_modules  ./node_modules
+COPY --from=builder --chown=feishin:feishin /app/package.json  ./package.json
+COPY --from=builder --chown=feishin:feishin /app/resources     ./resources
+COPY --from=builder --chown=feishin:feishin /app/assets        ./assets
 
 # Process supervision + launch scripts
 COPY docker/host/supervisord.conf /etc/supervisor/conf.d/feishin.conf
-COPY docker/host/launch-feishin.sh /usr/local/bin/launch-feishin.sh
-RUN chmod +x /usr/local/bin/launch-feishin.sh \
-    && mkdir -p /config \
-    # non-root user that can reach /dev/snd (group "audio" gid is host-dependent;
-    # compose adds the host's audio group via group_add)
-    && useradd -m -u 1000 feishin \
-    && chown -R feishin:feishin /app /config
+COPY --chmod=0755 docker/host/launch-feishin.sh /usr/local/bin/launch-feishin.sh
 
 # 4333 = Feishin Remote Control (Stream Deck + web remote)
 # 6080 = noVNC (browser UI for setup / occasional browsing)
