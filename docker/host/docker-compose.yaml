@@ -46,6 +46,9 @@ services:
 
         environment:
             - FEISHIN_USER_DATA=/config
+            # Virtual display / noVNC resolution as WIDTHxHEIGHTxDEPTH.
+            # Change this and run `docker compose ... up -d` to resize (no rebuild).
+            - SCREEN_RESOLUTION=1920x1200x24
 
         # ---------------------------------------------------------------------
         # OPTION: PipeWire instead of bare ALSA

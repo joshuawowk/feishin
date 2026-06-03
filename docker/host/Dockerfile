@@ -44,7 +44,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     # Electron in a container: no setuid sandbox, no OS keyring
     ELECTRON_DISABLE_SANDBOX=1 \
     # Where Feishin persists settings/login (mount a volume here)
-    FEISHIN_USER_DATA=/config
+    FEISHIN_USER_DATA=/config \
+    # Virtual display size (WIDTHxHEIGHTxDEPTH). Override in docker-compose.yaml.
+    SCREEN_RESOLUTION=1920x1200x24
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         # --- audio engine
