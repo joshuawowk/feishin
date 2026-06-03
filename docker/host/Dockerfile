@@ -64,9 +64,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# non-root user that can reach /dev/snd (group "audio" gid is host-dependent;
-# compose adds the host's audio group via group_add)
-RUN useradd -m -u 1000 feishin && mkdir -p /config && chown feishin:feishin /config
+# non-root user that can reach /dev/snd. The feishin user MUST be a real member
+# of the "audio" group in /etc/group: supervisord drops privileges via
+# initgroups(), which only grants groups the user is listed in — the compose
+# `group_add` alone is NOT enough for the supervised process (it only affects
+# docker-exec'd shells). Without this, mpv fails with "Playback open error: No
+# such device". Debian's audio group is gid 29 (matches most hosts' /dev/snd).
+RUN (getent group audio || groupadd -g 29 audio) \
+    && useradd -m -u 1000 feishin \
+    && usermod -aG audio feishin \
+    && mkdir -p /config && chown feishin:feishin /config
 
 # Copy the built app + the electron runtime (node_modules holds the electron
 # binary). Ownership is set during COPY (--chown) — a recursive `chown -R` over

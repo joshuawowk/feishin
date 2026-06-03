@@ -80,3 +80,18 @@ sound comes out of the server. Then control transport from the Stream Deck (see
   Electron errors; ensure `shm_size` is set.
 - **Electron exits immediately:** almost always the sandbox — this image already
   passes `--no-sandbox`; don't remove it.
+- **mpv: "Playback open error: No such device":** the `feishin` user isn't in the
+  container's `audio` group. The image now adds it (see Dockerfile); rebuild if
+  you hit this on an old image.
+- **mpv: "Playback open error: Device or resource busy":** something on the HOST
+  already holds the card exclusively — usually PipeWire. mpv uses exclusive ALSA,
+  so free the card by stopping/masking the host's PipeWire user services:
+
+  ```bash
+  XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user mask --now \
+    pipewire.socket pipewire.service pipewire-media-session.service
+  ```
+
+  (Reverse later with `systemctl --user unmask` + `--now`.) Alternatively, route
+  the container through the host PipeWire instead of bare ALSA — see the OPTION
+  block in `docker-compose.yaml`.
