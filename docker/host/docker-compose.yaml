@@ -37,6 +37,9 @@ services:
         # Login, settings, and the chosen audio device persist here.
         volumes:
             - feishin-host-config:/config
+            # Make the attached interface the default ALSA device (see asound.conf).
+            # Edit docker/host/asound.conf if your card's short name isn't "Go".
+            - ./asound.conf:/etc/asound.conf:ro
 
         # Electron likes a bit of shared memory for Chromium
         shm_size: "512m"
